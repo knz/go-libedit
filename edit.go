@@ -8,11 +8,15 @@ import (
 
 // OSX bundles libedit, but places headers in /usr/include/readline directly.
 // FreeBSD bundles libedit, but places headers in /usr/include/edit/readline.
+// For Linux we use the bundled sources.
 
 // #cgo darwin LDFLAGS: -ledit
-// #cgo darwin CPPFLAGS: -I/usr/include/readline
+// #cgo darwin CPPFLAGS: -I/usr/include/readline -Ishim
 // #cgo freebsd LDFLAGS: -ledit
-// #cgo freebsd CPPFLAGS: -I/usr/include/edit/readline
+// #cgo freebsd CPPFLAGS: -I/usr/include/edit/readline -Ishim
+// #cgo linux LDFLAGS: -lncurses
+// #cgo linux CFLAGS: -Wno-unused-result
+// #cgo linux CPPFLAGS: -Isrc -Isrc/c-libedit -Isrc/c-libedit/editline -Isrc/c-libedit/linux-build
 //
 // #include <readline.h>
 // #include <stdio.h>

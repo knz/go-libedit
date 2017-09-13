@@ -1,3 +1,5 @@
+// +build darwin freebsd linux openbsd netbsd dragonfly
+
 package libedit
 
 import (
@@ -6,14 +8,15 @@ import (
 	"unsafe"
 )
 
-// OSX bundles libedit, but places headers in /usr/include/readline directly.
+// OSX, NetBSD and OpenBSD bundle libedit, but place headers in
+// /usr/include/readline directly.
 // FreeBSD bundles libedit, but places headers in /usr/include/edit/readline.
 // For Linux we use the bundled sources.
 
-// #cgo darwin LDFLAGS: -ledit
-// #cgo darwin CPPFLAGS: -I/usr/include/readline -Ishim
-// #cgo freebsd LDFLAGS: -ledit
-// #cgo freebsd CPPFLAGS: -I/usr/include/edit/readline -Ishim
+// #cgo darwin openbsd netbsd LDFLAGS: -ledit
+// #cgo darwin openbsd netbsd CPPFLAGS: -I/usr/include/readline -Ishim
+// #cgo freebsd dragonfly LDFLAGS: -ledit
+// #cgo freebsd dragonfly CPPFLAGS: -I/usr/include/edit/readline -Ishim
 // #cgo linux LDFLAGS: -lncurses
 // #cgo linux CFLAGS: -Wno-unused-result
 // #cgo linux CPPFLAGS: -Isrc -Isrc/c-libedit -Isrc/c-libedit/editline -Isrc/c-libedit/linux-build

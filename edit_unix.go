@@ -9,30 +9,46 @@ import (
 	"unsafe"
 )
 
-// OSX, NetBSD and OpenBSD bundle libedit, but place headers in
-// /usr/include/readline directly.
-// FreeBSD bundles libedit, but places headers in /usr/include/edit/readline.
-// For Linux we use the bundled sources.
+// - NetBSD and OpenBSD bundle libedit and place headers in /usr/include/readline.
+// - FreeBSD bundles libedit and places headers in /usr/include/edit/readline.
+// - OSX bundles libedit and places headers in /usr/include/editline.
+// - DragonflyBSD bundles libedit and places headers in /usr/include/priv/readline.
+// - Also both DragonflyBSD and OSX uses non-standard typedefs.
+// - For Linux we use the bundled sources.
 
-// #cgo darwin openbsd netbsd LDFLAGS: -ledit
-// #cgo darwin openbsd netbsd CPPFLAGS: -I/usr/include/readline -Ishim
-// #cgo freebsd dragonfly LDFLAGS: -ledit
-// #cgo freebsd dragonfly CPPFLAGS: -I/usr/include/edit/readline -Ishim
-// #cgo linux LDFLAGS: -lncurses
-// #cgo linux CFLAGS: -Wno-unused-result
-// #cgo linux CPPFLAGS: -Isrc -Isrc/c-libedit -Isrc/c-libedit/editline -Isrc/c-libedit/linux-build
+// #cgo openbsd netbsd freebsd dragonfly darwin LDFLAGS: -ledit
+// #cgo openbsd netbsd freebsd dragonfly darwin CPPFLAGS: -Ishim
+// #cgo openbsd netbsd   CPPFLAGS: -I/usr/include/readline
+// #cgo darwin           CPPFLAGS: -I/usr/include/editline
+// #cgo freebsd          CPPFLAGS: -I/usr/include/edit/readline
+// #cgo dragonfly        CPPFLAGS: -I/usr/include/priv/readline
+// #cgo dragonfly darwin CPPFLAGS: -Dweird_completion_typedef
+// #cgo linux          LDFLAGS: -lncurses
+// #cgo linux          CFLAGS: -Wno-unused-result
+// #cgo linux          CPPFLAGS: -Isrc -Isrc/c-libedit -Isrc/c-libedit/editline -Isrc/c-libedit/linux-build
 //
 // #include <readline.h>
 // #include <stdio.h>
 // #include <stdlib.h>
 //
+// // Some helper functions that make the Go code easier on the eye.
 // void go_libedit_printstring(char *s) { printf("%s\n", s); }
+// void go_libedit_set_string_array(char **ar, int p, char *s) { ar[p] = s; }
+//
+// // This function is defined in edit_unix_completion.go.
 // extern char **go_libedit_autocomplete(char *word, char *line, int start, int end);
+//
+// // This function adds the const qualifier which the Go //export directive can't generate.
 // static char **wrap_autocomplete(const char *word, int start, int end) {
 //     return go_libedit_autocomplete((char*)word, rl_line_buffer, start, end);
 // }
-// rl_completion_func_t *go_libedit_autocomplete_ptr = wrap_autocomplete;
-// void go_libedit_set_string_array(char **ar, int p, char *s) { ar[p] = s; }
+//
+// #ifdef weird_completion_typedef
+// #define go_libedit_completion_func_t CPPFunction
+// #else
+// #define go_libedit_completion_func_t rl_completion_func_t
+// #endif
+// go_libedit_completion_func_t *go_libedit_autocomplete_ptr = wrap_autocomplete;
 import "C"
 
 var cAppName *C.char

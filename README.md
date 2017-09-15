@@ -1,6 +1,8 @@
-# go-libedit
+# go-libedit 
 
 Go wrapper around `libedit`, a replacement to GNU readline using the BSD license.
+
+![travis](https://travis-ci.org/knz/go-libedit.svg?branch=master)
 
 **Prerequisites: ncurses/terminfo development headers.**
 

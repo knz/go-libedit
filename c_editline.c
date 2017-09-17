@@ -113,15 +113,7 @@ static unsigned char _el_rl_tstp(EditLine *el, int ch) {
 
 static sigjmp_buf jmpbuf;
 static unsigned char _el_rl_intr(EditLine *el, int ch) {
-    const LineInfo *li = el_line(el);
-    if (li->lastchar != li->buffer) {
-	// Move to end of line.
-	el_cursor(el, li->lastchar - li->cursor);
-	// Delete all the line.
-	el_deletestr(el, li->lastchar - li->buffer);
-	return CC_REFRESH;
-    }
-    // Line is empty: cancel input.
+    // Reveal the Ctrl+C to the top-level caller of el_gets.
     siglongjmp(jmpbuf, 1);
 }
 
@@ -250,6 +242,11 @@ char *go_libedit_gets(EditLine *el, int *count, int *interrupted) {
 	intr_disabled = 1;
     }
 
+    // Set up libedit's signal handlers.
+    // We need to do this on every invocaiton of el_gets
+    // because cgo resets signal handlers at the C/Go boundary.
+    el_set(el, EL_SIGNAL, 1);
+
     // Prepare to be interrupted.
     // This will occur when Ctrl+C is entered at the beginning of a
     // line.
@@ -257,20 +254,17 @@ char *go_libedit_gets(EditLine *el, int *count, int *interrupted) {
 	saveerr = EINTR;
 	*interrupted = 1;
 	ret = NULL;
-	goto restoretty;
+	goto restore;
     }
-
-    // Set up libedit's.
-    el_set(el, EL_SIGNAL, 1);
 
     // Read the line.
     ret = (char *)el_gets(el, count);
     saveerr = errno;
 
+restore:
     // Remove libedit's signal handlers.
     el_set(el, EL_SIGNAL, 0);
 
-restoretty:
     // Restore Ctrl+C processing by the terminal.
     if (intr_disabled) {
 	t.c_cc[VINTR] = intr_char;

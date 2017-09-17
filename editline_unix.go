@@ -229,7 +229,10 @@ func (el EditLine) GetLine() (string, error) {
 	var interrupted C.int
 	s, err := C.go_libedit_gets(st.el, &count, &interrupted)
 	if interrupted > 0 {
-		return "", ErrInterrupted
+		// Reveal the partial line.
+		line, _ := el.GetLineInfo()
+		C.el_reset(st.el)
+		return line, ErrInterrupted
 	}
 	if err != nil {
 		return "", err

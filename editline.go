@@ -93,9 +93,7 @@ func InitFiles(appName string, inf, outf, errf *os.File) (e EditLine, err error)
 	}
 	cAppName := C.CString(appName)
 	defer C.free(unsafe.Pointer(cAppName))
-	el, err := C.go_libedit_init(cAppName,
-		inFile, outFile, errFile,
-		C.int(inf.Fd()), C.int(outf.Fd()), C.int(errf.Fd()))
+	el, err := C.go_libedit_init(cAppName, inFile, outFile, errFile)
 	if el == nil || err != nil {
 		if err == nil {
 			err = errUnknown

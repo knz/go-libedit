@@ -7,8 +7,7 @@
 typedef char* pchar;
 
 EditLine* go_libedit_init(char *appName,
-			  FILE* fin, FILE* fout, FILE *ferr,
-			  int fdin, int fdout, int fderr);
+			  FILE* fin, FILE* fout, FILE *ferr);
 
 extern char *go_libedit_emptycstring;
 extern const char* go_libedit_mode_read;

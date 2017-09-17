@@ -4,7 +4,6 @@ package libedit
 
 // #include <stdlib.h>
 // #include "c_editline.h"
-// typedef char* pchar;
 import "C"
 
 type AutoCompleter interface {

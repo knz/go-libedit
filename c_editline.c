@@ -38,10 +38,9 @@ void go_libedit_set_prompt(EditLine *el, int p, go_libedit_promptgen f) {
 static unsigned char	 _el_rl_complete(EditLine *, int);
 static unsigned char	 _el_rl_tstp(EditLine *, int);
 EditLine* go_libedit_init(char *appName,
-			  FILE* fin, FILE* fout, FILE *ferr,
-			  int fdin, int fdout, int fderr) {
+			  FILE* fin, FILE* fout, FILE *ferr) {
     // Create the editor.
-    EditLine *e = el_init_fd(appName, fin, fout, ferr, fdin, fdout, fderr);
+    EditLine *e = el_init(appName, fin, fout, ferr);
     if (!e) {
 	return NULL;
     }
@@ -49,7 +48,7 @@ EditLine* go_libedit_init(char *appName,
     // Do we really want to edit?
     int editmode = 1;
     struct termios t;
-    if (tcgetattr(fdin, &t) != -1 && (t.c_lflag & ECHO) == 0)
+    if (tcgetattr(fileno(fin), &t) != -1 && (t.c_lflag & ECHO) == 0)
 	editmode = 0;
     if (!editmode)
 	el_set(e, EL_EDITMODE, 0);

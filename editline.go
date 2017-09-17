@@ -283,6 +283,14 @@ func (el EditLine) SetRightPrompt(gen RightPromptGenerator) {
 	}
 }
 
+func (el EditLine) GetLineInfo() (string, int) {
+	st := &editors[el]
+	li := C.el_line(st.el)
+	return C.GoStringN(li.buffer,
+		C.int(uintptr(unsafe.Pointer(li.lastchar))-uintptr(unsafe.Pointer(li.buffer))),
+	), int(uintptr(unsafe.Pointer(li.cursor)) - uintptr(unsafe.Pointer(li.buffer)))
+}
+
 //export go_libedit_getcompletions
 func go_libedit_getcompletions(cI C.int, cWord *C.char) **C.char {
 	if int(cI) < 0 || int(cI) >= len(editors) {

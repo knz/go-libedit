@@ -158,7 +158,7 @@ func (el EditLine) AddHistory(line string) error {
 	}
 
 	if st.autoSaveHistory && st.histFile != nil {
-		_, err := C.go_libedit_write_history(st.h, histFile)
+		_, err := C.go_libedit_write_history(st.h, st.histFile)
 		if err != nil {
 			return fmt.Errorf("write_history: %v", err)
 		}
@@ -172,7 +172,7 @@ func (el EditLine) LoadHistory(file string) error {
 		return errNoHistory
 	}
 
-	histFile = C.CString(file)
+	histFile := C.CString(file)
 	defer C.free(unsafe.Pointer(histFile))
 	_, err := C.go_libedit_read_history(st.h, histFile)
 	if err != nil && err != syscall.ENOENT {

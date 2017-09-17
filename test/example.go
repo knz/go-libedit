@@ -24,7 +24,7 @@ func main() {
 	}
 	defer libedit.Cleanup()
 
-	if err := libedit.UseHistory("", true, true); err != nil {
+	if err := libedit.UseHistory("", false, true); err != nil {
 		log.Fatalf("use hist: %v", err)
 	}
 

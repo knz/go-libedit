@@ -80,6 +80,10 @@ func InitFiles(appName string, inf, outf, errf *os.File) (e EditLine, err error)
 	cAppName := C.CString(appName)
 	defer C.free(unsafe.Pointer(cAppName))
 	el, err := C.go_libedit_init(cAppName, inFile, outFile, errFile)
+	// If the settings file did not exist, ignore the error.
+	if err == syscall.ENOENT {
+		err = nil
+	}
 	if el == nil || err != nil {
 		if err == nil {
 			err = errUnknown

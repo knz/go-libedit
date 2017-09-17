@@ -37,6 +37,7 @@ void go_libedit_set_prompt(EditLine *el, int p, go_libedit_promptgen f) {
 
 static unsigned char	 _el_rl_complete(EditLine *, int);
 static unsigned char	 _el_rl_tstp(EditLine *, int);
+static unsigned char	 _el_rl_intr(EditLine *, int);
 EditLine* go_libedit_init(char *appName,
 			  FILE* fin, FILE* fout, FILE *ferr) {
     // Create the editor.
@@ -56,6 +57,12 @@ EditLine* go_libedit_init(char *appName,
     // Load the emacs keybindings by default. We need
     // to do that before the defaults are overridden below.
     el_set(e, EL_EDITOR, "emacs");
+
+    // Handle ^C properly.
+    el_set(e, EL_ADDFN, "rl_interrupt",
+	   "ReadLine compatible interrupt function",
+	   _el_rl_intr);
+    el_set(e, EL_BIND, "^C", "rl_interrupt", NULL);
 
     // Word completion - this has to go after loading the default
     // mappings.
@@ -102,6 +109,20 @@ EditLine* go_libedit_init(char *appName,
 static unsigned char _el_rl_tstp(EditLine *el, int ch) {
     (void) kill(0, SIGTSTP);
     return CC_NORM;
+}
+
+static sigjmp_buf jmpbuf;
+static unsigned char _el_rl_intr(EditLine *el, int ch) {
+    const LineInfo *li = el_line(el);
+    if (li->lastchar != li->buffer) {
+	// Move to end of line.
+	el_cursor(el, li->lastchar - li->cursor);
+	// Delete all the line.
+	el_deletestr(el, li->lastchar - li->buffer);
+	return CC_REFRESH;
+    }
+    // Line is empty: cancel input.
+    siglongjmp(jmpbuf, 1);
 }
 
 /************** history **************/
@@ -211,37 +232,32 @@ static unsigned char _el_rl_complete(EditLine *el, int ch) {
 
 /*************** el_gets *************/
 
-static sigjmp_buf jmpbuf;
-
-// do_sigint catches SIGINT and terminates the current input.
-static void do_sigint(int unused) {
-    siglongjmp(jmpbuf, 1);
-}
 
 char *go_libedit_gets(EditLine *el, int *count, int *interrupted) {
     char *ret = NULL;
+    int saveerr = 0;
+
+    // Disable conversion of Ctrl+C to signal.
+    FILE *inf;
+    el_get(el, EL_GETFP, 0, &inf);
+    struct termios t;
+    int intr_disabled = 0;
+    cc_t intr_char;
+    if (tcgetattr(fileno(inf), &t) != -1) {
+	intr_char = t.c_cc[VINTR];
+	t.c_cc[VINTR] = 0;
+	tcsetattr(fileno(inf), TCSANOW, &t);
+	intr_disabled = 1;
+    }
 
     // Prepare to be interrupted.
+    // This will occur when Ctrl+C is entered at the beginning of a
+    // line.
     if (sigsetjmp(jmpbuf, 1)) {
-	el_reset(el);
-	errno = EINTR;
+	saveerr = EINTR;
 	*interrupted = 1;
 	ret = NULL;
-	goto finish;
-    }
-
-    // Save Go's default handler.
-    struct sigaction oact;
-    if (-1 == sigaction(SIGINT, 0, &oact)) {
-	return NULL;
-    }
-
-    // Set up our own.
-    struct sigaction act;
-    act.sa_handler = do_sigint;
-    act.sa_flags = 0;
-    if (-1 == sigaction(SIGINT, &act, 0)) {
-	return NULL;
+	goto restoretty;
     }
 
     // Set up libedit's.
@@ -249,16 +265,17 @@ char *go_libedit_gets(EditLine *el, int *count, int *interrupted) {
 
     // Read the line.
     ret = (char *)el_gets(el, count);
-
-finish:
-    (void)0;
-    int saveerr = errno;
+    saveerr = errno;
 
     // Remove libedit's signal handlers.
     el_set(el, EL_SIGNAL, 0);
 
-    // Restore Go's signal handlers.
-    (void) sigaction(SIGINT, &oact, 0);
+restoretty:
+    // Restore Ctrl+C processing by the terminal.
+    if (intr_disabled) {
+	t.c_cc[VINTR] = intr_char;
+	tcsetattr(fileno(inf), TCSANOW, &t);
+    }
 
     // Restore errno.
     errno = saveerr;

@@ -11,11 +11,11 @@ import (
 
 type example struct{}
 
-func (_ example) GetLeftPrompt(_ libedit.EditLine) string {
+func (_ example) GetLeftPrompt() string {
 	return "hello> "
 }
 
-func (_ example) GetRightPrompt(_ libedit.EditLine) string {
+func (_ example) GetRightPrompt() string {
 	return "(-:"
 }
 

@@ -29,11 +29,11 @@ import "C"
 type EditLine int
 
 type LeftPromptGenerator interface {
-	GetLeftPrompt(el EditLine) string
+	GetLeftPrompt() string
 }
 
 type RightPromptGenerator interface {
-	GetRightPrompt(el EditLine) string
+	GetRightPrompt() string
 }
 
 type CompletionGenerator interface {
@@ -330,7 +330,7 @@ func go_libedit_prompt_left(el *C.EditLine) *C.char {
 	if st.promptGenLeft == nil {
 		return C.go_libedit_emptycstring
 	}
-	st.cPromptLeft = C.CString(st.promptGenLeft.GetLeftPrompt(EditLine(e)))
+	st.cPromptLeft = C.CString(st.promptGenLeft.GetLeftPrompt())
 	return st.cPromptLeft
 }
 
@@ -349,6 +349,6 @@ func go_libedit_prompt_right(el *C.EditLine) *C.char {
 	if st.promptGenRight == nil {
 		return C.go_libedit_emptycstring
 	}
-	st.cPromptRight = C.CString(st.promptGenRight.GetRightPrompt(EditLine(e)))
+	st.cPromptRight = C.CString(st.promptGenRight.GetRightPrompt())
 	return st.cPromptRight
 }

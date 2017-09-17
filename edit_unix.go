@@ -30,10 +30,10 @@ import (
 // #include <readline.h>
 // #include <stdio.h>
 // #include <stdlib.h>
+// #include "c_editline.h"
 //
 // // Some helper functions that make the Go code easier on the eye.
 // void go_libedit_printstring(char *s) { printf("%s\n", s); }
-// void go_libedit_set_string_array(char **ar, int p, char *s) { ar[p] = s; }
 //
 // // This function is defined in edit_unix_completion.go.
 // extern char **go_libedit_autocomplete(char *word, char *line, int start, int end);

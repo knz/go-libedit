@@ -3,9 +3,8 @@
 package libedit
 
 // #include <stdlib.h>
-// extern void go_libedit_printstring(char *s);
+// #include "c_editline.h"
 // typedef char* pchar;
-// extern void go_libedit_set_string_array(char **ar, int p, char *s);
 import "C"
 
 type AutoCompleter interface {

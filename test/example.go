@@ -9,9 +9,17 @@ import (
 	libedit "github.com/knz/go-libedit"
 )
 
-type completeHello struct{}
+type example struct{}
 
-func (_ completeHello) Do(word, line string, start, end int) []string {
+func (_ example) GetLeftPrompt() string {
+	return "hello> "
+}
+
+func (_ example) GetRightPrompt() string {
+	return "(-:"
+}
+
+func (_ example) GetCompletions(word string) []string {
 	if strings.HasPrefix(word, "he") {
 		return []string{"hello!"}
 	}
@@ -19,28 +27,30 @@ func (_ completeHello) Do(word, line string, start, end int) []string {
 }
 
 func main() {
-	if err := libedit.Initialize("example"); err != nil {
-		log.Fatalf("init: %v", err)
+	el, err := libedit.Init("example")
+	if err != nil {
+		log.Fatal(err)
 	}
-	defer libedit.Cleanup()
+	defer el.Close()
 
-	if err := libedit.UseHistory("", false, true); err != nil {
-		log.Fatalf("use hist: %v", err)
-	}
-
-	libedit.Completer = completeHello{}
-
-	libedit.SetPrompt("hello> ")
+	el.UseHistory(-1, true)
+	el.SetCompleter(example{})
+	el.SetLeftPrompt(example{})
+	el.SetRightPrompt(example{})
 	for {
-		s, err := libedit.Readline()
+		s, err := el.GetLine()
 		if err != nil {
 			if err == io.EOF {
 				break
 			}
+			if err == libedit.ErrInterrupted {
+				fmt.Printf("interrupted! (%q)\n", s)
+				continue
+			}
 			log.Fatal(err)
 		}
-		fmt.Println("echo", s)
-		if err := libedit.AddHistory(s); err != nil {
+		fmt.Printf("echo %q\n", s)
+		if err := el.AddHistory(s); err != nil {
 			log.Fatal(err)
 		}
 	}

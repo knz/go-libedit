@@ -10,8 +10,8 @@ How to use:
 
 - `go build` / `go install`
 - see `test/example.go` for a demo.
-- basic idea: call `Initialize()` once. Then call `SetPrompt()` and
-  `Readline()` as needed. Finally call `Cleanup()`.
+- basic idea: call `Init()` once. Then call `SetLeftPrompt()` and
+  `GetLine()` as needed. Finally call `Close()`.
 
 ## How to force using the system-wide libedit on GNU/Linux
 

@@ -20,6 +20,8 @@ cp -a libedit-*/src/editline c-libedit/
 cp -a libedit-*/src/*.[ch] c-libedit/
 cp -a build/config.h build/src/*.h c-libedit/linux-build/
 
+patch -p1 <sa-restart.patch
+
 (cd c-libedit &&
      for i in *.c; do
 	 echo "#include \"$i\"">../libedit-$i

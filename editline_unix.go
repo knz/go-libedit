@@ -13,7 +13,7 @@ import (
 
 // #cgo openbsd netbsd freebsd dragonfly darwin LDFLAGS: -ledit
 // #cgo openbsd netbsd freebsd dragonfly darwin CPPFLAGS: -Ishim
-// #cgo linux LDFLAGS: -lncurses
+// #cgo linux LDFLAGS: -ltinfo
 // #cgo linux CFLAGS: -Wno-unused-result
 // #cgo linux CPPFLAGS: -Isrc -Isrc/c-libedit -Isrc/c-libedit/editline -Isrc/c-libedit/linux-build
 //

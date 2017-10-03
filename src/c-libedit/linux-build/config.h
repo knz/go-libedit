@@ -5,7 +5,7 @@
 /* #undef CLOSEDIR_VOID */
 
 /* Define to 1 if you have the <curses.h> header file. */
-#define HAVE_CURSES_H 1
+/* #undef HAVE_CURSES_H */
 
 /* Define to 1 if you have the <dirent.h> header file, and it defines `DIR'.
    */
@@ -71,7 +71,7 @@
 #define HAVE_MEMSET 1
 
 /* Define to 1 if you have the <ncurses.h> header file. */
-#define HAVE_NCURSES_H 1
+/* #undef HAVE_NCURSES_H */
 
 /* Define to 1 if you have the <ndir.h> header file, and it defines `DIR'. */
 /* #undef HAVE_NDIR_H */
@@ -83,7 +83,7 @@
 #define HAVE_RE_COMP 1
 
 /* Define to 1 if you have the `secure_getenv' function. */
-#define HAVE_SECURE_GETENV 1
+/* #undef HAVE_SECURE_GETENV */
 
 /* Define to 1 if `stat' has the bug that it succeeds when given the
    zero-length file name argument. */
@@ -135,7 +135,7 @@
 /* #undef HAVE_STRUCT_DIRENT_D_NAMLEN */
 
 /* Define to 1 if you have the <sys/cdefs.h> header file. */
-#define HAVE_SYS_CDEFS_H 1
+/* #undef HAVE_SYS_CDEFS_H */
 
 /* Define to 1 if you have the <sys/dir.h> header file, and it defines `DIR'.
    */
@@ -204,7 +204,7 @@
 #define LT_OBJDIR ".libs/"
 
 /* Name of package */
-#define PACKAGE "libedit-20170921"
+#define PACKAGE "libedit-20171003"
 
 /* Define to the address where bug reports for this package should be sent. */
 #define PACKAGE_BUGREPORT ""
@@ -216,7 +216,7 @@
 #define PACKAGE_STRING "libedit 3.1"
 
 /* Define to the one symbol short name of this package. */
-#define PACKAGE_TARNAME "libedit-20170921"
+#define PACKAGE_TARNAME "libedit-20171003"
 
 /* Define to the home page for this package. */
 #define PACKAGE_URL ""

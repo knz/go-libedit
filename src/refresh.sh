@@ -12,7 +12,14 @@ apt-get source libbsd0
 apt-get source libedit
 
 mkdir build
-(cd build && ../libedit-*/configure && make SUBDIRS=src)
+(cd build \
+     && export ac_cv_func_secure_getenv=no \
+     && export ac_cv_func___secure_getenv=no \
+     && export ac_cv_header_sys_cdefs_h=no \
+     && export ac_cv_header_curses_h=no \
+     && export ac_cv_header_ncurses_h=no \
+     && ../libedit-*/configure \
+     && make SUBDIRS=src)
 
 mkdir -p c-libedit/linux-build c-libedit/editline
 

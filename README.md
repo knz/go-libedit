@@ -4,8 +4,6 @@ Go wrapper around `libedit`, a replacement to GNU readline using the BSD license
 
 [![travis](https://travis-ci.org/knz/go-libedit.svg?branch=master)](https://travis-ci.org/knz/go-libedit)
 
-**Prerequisites: ncurses/terminfo development headers.**
-
 How to use:
 
 - `go build` / `go install`

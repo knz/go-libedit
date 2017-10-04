@@ -1,8 +1,6 @@
-package libedit
+package libedit_common
 
 import "errors"
-
-type EditLine int
 
 type LeftPromptGenerator interface {
 	GetLeftPrompt() string

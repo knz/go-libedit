@@ -405,7 +405,11 @@ fn_complete(EditLine *el,
 	char **(*attempted_completion_function)(const char *, int, int),
 	const wchar_t *word_break, const wchar_t *special_prefixes,
 	const char *(*app_func)(const char *), size_t query_items,
-	int *completion_type, int *over, int *point, int *end)
+	int *completion_type, int *over, int *point, int *end,
+	const wchar_t *(*bsd_unused0)(const wchar_t *, const wchar_t *),
+	wchar_t *(*bsd_unused1)(const wchar_t *),
+	char *(*bsd_unused2)(const char *)
+    )
 {
 	const LineInfoW *li;
 	wchar_t *temp;
@@ -567,5 +571,5 @@ _el_fn_complete(EditLine *el, int ch __attribute__((__unused__)))
 {
 	return (unsigned char)fn_complete(el, NULL, NULL,
 	    break_chars, NULL, NULL, (size_t)100,
-	    NULL, NULL, NULL, NULL);
+	    NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 }

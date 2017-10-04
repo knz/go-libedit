@@ -179,7 +179,10 @@ fn_complete(EditLine *el,
 	    char **(*attempted_completion_function)(const char *, int, int),
 	    const wchar_t *word_break, const wchar_t *special_prefixes,
 	    const char *(*app_func)(const char *), size_t query_items,
-	    int *completion_type, int *over, int *point, int *end);
+	    int *completion_type, int *over, int *point, int *end,
+	    const wchar_t *(*find_word_start_func)(const wchar_t *, const wchar_t *),
+	    wchar_t *(*dequoting_func)(const wchar_t *),
+	    char *(*quoting_func)(const char *));
 static const wchar_t break_chars[] = L" \t\n\"\\'`@$><=;|&{(";
 
 
@@ -217,7 +220,10 @@ static unsigned char _el_rl_complete(EditLine *el, int ch) {
 	NULL /* completion_type */,
 	&avoid_filename_completion /* over */,
 	NULL /* point */,
-	NULL /* end */
+	NULL /* end */,
+	NULL /* find_word_start_func */,
+	NULL /* dequoting_func */,
+	NULL /* quoting_func */
 	);
 }
 

@@ -35,7 +35,11 @@ int fn_complete(EditLine *,
     char *(*)(const char *, int),
     char **(*)(const char *, int, int),
     const wchar_t *, const wchar_t *, const char *(*)(const char *), size_t,
-    int *, int *, int *, int *);
+    int *, int *, int *, int *,
+    const wchar_t *(*)(const wchar_t *, const wchar_t *),
+    wchar_t *(*)(const wchar_t *),
+    char *(*)(const char *)
+    );
 
 void fn_display_match_list(EditLine *, char **, size_t, size_t);
 char *fn_tilde_expand(const char *);

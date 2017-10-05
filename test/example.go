@@ -33,6 +33,11 @@ func main() {
 	}
 	defer el.Close()
 
+	// RebindControlKeys ensures that Ctrl+C, Ctrl+Z, Ctrl+R and Tab are
+	// properly bound even if the user's .editrc has used bind -e or
+	// bind -v to load a predefined keymap.
+	el.RebindControlKeys()
+
 	el.UseHistory(-1, true)
 	el.SetCompleter(example{})
 	el.SetLeftPrompt(example{})

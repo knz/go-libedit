@@ -34,6 +34,7 @@ func InitFiles(_ string, stdin, stdout, stderr *os.File) (EditLine, error) {
 	return EditLine(len(editors) - 1), nil
 }
 
+func (el EditLine) RebindControlKeys()                    {}
 func (el EditLine) Close()                                {}
 func (el EditLine) SaveHistory() error                    { return nil }
 func (el EditLine) AddHistory(_ string) error             { return nil }

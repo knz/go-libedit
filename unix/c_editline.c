@@ -38,26 +38,8 @@ void go_libedit_set_prompt(EditLine *el, int p, go_libedit_promptgen f) {
 static unsigned char	 _el_rl_complete(EditLine *, int);
 static unsigned char	 _el_rl_tstp(EditLine *, int);
 static unsigned char	 _el_rl_intr(EditLine *, int);
-EditLine* go_libedit_init(char *appName,
-			  FILE* fin, FILE* fout, FILE *ferr) {
-    // Create the editor.
-    EditLine *e = el_init(appName, fin, fout, ferr);
-    if (!e) {
-	return NULL;
-    }
 
-    // Do we really want to edit?
-    int editmode = 1;
-    struct termios t;
-    if (tcgetattr(fileno(fin), &t) != -1 && (t.c_lflag & ECHO) == 0)
-	editmode = 0;
-    if (!editmode)
-	el_set(e, EL_EDITMODE, 0);
-
-    // Load the emacs keybindings by default. We need
-    // to do that before the defaults are overridden below.
-    el_set(e, EL_EDITOR, "emacs");
-
+void go_libedit_rebind_ctrls(EditLine *e) {
     // Handle ^C properly.
     el_set(e, EL_ADDFN, "rl_interrupt",
 	   "ReadLine compatible interrupt function",
@@ -79,6 +61,29 @@ EditLine* go_libedit_init(char *appName,
 
     // Readline history search. People are used to this.
     el_set(e, EL_BIND, "^R", "em-inc-search-prev", NULL);
+}
+
+EditLine* go_libedit_init(char *appName,
+			  FILE* fin, FILE* fout, FILE *ferr) {
+    // Create the editor.
+    EditLine *e = el_init(appName, fin, fout, ferr);
+    if (!e) {
+	return NULL;
+    }
+
+    // Do we really want to edit?
+    int editmode = 1;
+    struct termios t;
+    if (tcgetattr(fileno(fin), &t) != -1 && (t.c_lflag & ECHO) == 0)
+	editmode = 0;
+    if (!editmode)
+	el_set(e, EL_EDITMODE, 0);
+
+    // Load the emacs keybindings by default. We need
+    // to do that before the defaults are overridden below.
+    el_set(e, EL_EDITOR, "emacs");
+
+    go_libedit_rebind_ctrls(e);
 
     // Home/End keys.
     el_set(e, EL_BIND, "\\e[1~", "ed-move-to-beg", NULL);

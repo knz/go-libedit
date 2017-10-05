@@ -105,6 +105,11 @@ func InitFiles(appName string, inf, outf, errf *os.File) (e EditLine, err error)
 	return EditLine(len(editors) - 1), nil
 }
 
+func (el EditLine) RebindControlKeys() {
+	st := &editors[el]
+	C.go_libedit_rebind_ctrls(st.el)
+}
+
 func (el EditLine) Close() {
 	st := &editors[el]
 	if st.el == nil {

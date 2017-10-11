@@ -11,14 +11,6 @@ import (
 
 type example struct{}
 
-func (_ example) GetLeftPrompt() string {
-	return "hello> "
-}
-
-func (_ example) GetRightPrompt() string {
-	return "(-:"
-}
-
 func (_ example) GetCompletions(word string) []string {
 	if strings.HasPrefix(word, "he") {
 		return []string{"hello!"}
@@ -42,8 +34,8 @@ func main() {
 	el.LoadHistory("hist")
 	el.SetAutoSaveHistory("hist", true)
 	el.SetCompleter(example{})
-	el.SetLeftPrompt(example{})
-	el.SetRightPrompt(example{})
+	el.SetLeftPrompt("hello> ")
+	el.SetRightPrompt("(-:")
 	for {
 		s, err := el.GetLine()
 		if err != nil {

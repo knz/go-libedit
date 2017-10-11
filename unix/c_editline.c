@@ -16,9 +16,6 @@ const char* go_libedit_mode_append = "a";
 const char* go_libedit_locale1 = "en_US.UTF-8";
 const char* go_libedit_locale2 = "C.UTF-8";
 
-go_libedit_promptgen go_libedit_prompt_left_ptr = go_libedit_prompt_left;
-go_libedit_promptgen go_libedit_prompt_right_ptr = go_libedit_prompt_right;
-
 void go_libedit_set_string_array(char **ar, int p, char *s) {
     ar[p] = s;
 }
@@ -34,8 +31,17 @@ void go_libedit_set_clientdata(EditLine *el, int v) {
     el_set(el, EL_CLIENTDATA, p);
 }
 
-void go_libedit_set_prompt(EditLine *el, int p, go_libedit_promptgen f) {
-    el_set(el, p, f);
+/************** prompts **************/
+
+static char *go_libedit_lprompt_str;
+static char *go_libedit_rprompt_str;
+
+static char* go_libedit_lprompt(EditLine *el) {
+    return go_libedit_lprompt_str ? go_libedit_lprompt_str : "?";
+}
+
+static char* go_libedit_rprompt(EditLine *el) {
+    return go_libedit_rprompt_str ? go_libedit_rprompt_str : "";
 }
 
 /************** signals **************/
@@ -138,6 +144,7 @@ static void go_libedit_sig_handler(int signo)
 
 	// Reinstate the original signal handler.
 	(void) sigaction(signo, &g_sigcfg->sig_action[i], NULL);
+
 	// Re-send the signal to the process. For SIGCONT/SIGWINCH
 	// this is a no-op (we handled that above too), for the others
 	// "something will happen to the process"; that's why we
@@ -250,6 +257,12 @@ EditLine* go_libedit_init(char *appName, void** el_signal,
     // We'll do signalling ourselves, because Go wants SA_ONSTACK to
     // be set and libedit doesn't do that on its own.
     el_set(e, EL_SIGNAL, 0);
+
+    // Set up the prompt functions. Unfortunately we cannot use a real
+    // callback into Go because Go doesn't like being called from an
+    // alternate signal stack.
+    el_set(e, EL_PROMPT, go_libedit_lprompt);
+    el_set(e, EL_RPROMPT, go_libedit_rprompt);
 
     // Load the emacs keybindings by default. We need
     // to do that before the defaults are overridden below.
@@ -407,7 +420,8 @@ static unsigned char _el_rl_complete(EditLine *el, int ch) {
 
 /*************** el_gets *************/
 
-void *go_libedit_gets(EditLine *el, void *p_sigcfg, int *count, int *interrupted, int widechar) {
+void *go_libedit_gets(EditLine *el, char *lprompt, char *rprompt,
+		      void *p_sigcfg, int *count, int *interrupted, int widechar) {
     void *ret = NULL;
     int saveerr = 0;
 
@@ -426,17 +440,7 @@ void *go_libedit_gets(EditLine *el, void *p_sigcfg, int *count, int *interrupted
 
     // Install our signal handler.
     go_libedit_signal_t *sigcfg = (go_libedit_signal_t*)p_sigcfg;
-    // Disable signal stacks. We need the signals to be delivered on
-    // the Go stack, because the handler will cross the cgo barrier to
-    // fetch the prompt.
-    stack_t ss, oss;
-    ss.ss_flags = SS_DISABLE;
-    if (sigaltstack(&ss, &oss) < 0) {
-	saveerr = errno;
-	ret = NULL;
-	goto restore;
-    }
-    go_libedit_sig_set(el, (go_libedit_signal_t*)sigcfg);
+    go_libedit_sig_set(el, sigcfg);
 
     // Prepare to be interrupted.
     // This will occur when Ctrl+C is entered at the beginning of a
@@ -448,6 +452,10 @@ void *go_libedit_gets(EditLine *el, void *p_sigcfg, int *count, int *interrupted
 	goto restoresig;
     }
 
+    // Install the prompts.
+    go_libedit_lprompt_str = lprompt;
+    go_libedit_rprompt_str = rprompt;
+
     // Read the line.
     if (widechar) {
 	ret = (void *)el_wgets(el, count);
@@ -457,9 +465,11 @@ void *go_libedit_gets(EditLine *el, void *p_sigcfg, int *count, int *interrupted
     saveerr = errno;
 
 restoresig:
+    go_libedit_lprompt_str = NULL;
+    go_libedit_rprompt_str = NULL;
+
     // Remove our signal handler.
-    go_libedit_sig_clr((go_libedit_signal_t*)sigcfg);
-    (void) sigaltstack(&oss, NULL);
+    go_libedit_sig_clr(sigcfg);
 
 restore:
     // Restore Ctrl+C processing by the terminal.

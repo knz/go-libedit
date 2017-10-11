@@ -34,6 +34,7 @@ type CompletionGenerator = common.CompletionGenerator
 
 type state struct {
 	el              *C.EditLine
+	sigcfg          unsafe.Pointer
 	h               *C.History
 	cIn, cOut, cErr *C.FILE
 	inf, outf, errf *os.File
@@ -89,7 +90,8 @@ func InitFiles(appName string, wideChars bool, inf, outf, errf *os.File) (e Edit
 	}
 	cAppName := C.CString(appName)
 	defer C.free(unsafe.Pointer(cAppName))
-	el, err := C.go_libedit_init(cAppName, inFile, outFile, errFile)
+	var sigcfg unsafe.Pointer
+	el, err := C.go_libedit_init(cAppName, &sigcfg, inFile, outFile, errFile)
 	// If the settings file did not exist, ignore the error.
 	if err == syscall.ENOENT {
 		err = nil
@@ -106,8 +108,9 @@ func InitFiles(appName string, wideChars bool, inf, outf, errf *os.File) (e Edit
 		wc = 1
 	}
 	st := state{
-		el:  el,
-		inf: inf, outf: outf, errf: errf,
+		el:     el,
+		sigcfg: sigcfg,
+		inf:    inf, outf: outf, errf: errf,
 		cIn: inFile, cOut: outFile, cErr: errFile,
 		wideChars: wc,
 	}
@@ -141,6 +144,7 @@ func (el EditLine) Close() {
 		return
 	}
 	C.el_end(st.el)
+	C.free(st.sigcfg)
 	if st.h != nil {
 		C.history_end(st.h)
 	}
@@ -261,7 +265,7 @@ func (el EditLine) GetLine() (string, error) {
 
 	var count C.int
 	var interrupted C.int
-	s, err := C.go_libedit_gets(st.el, &count, &interrupted, C.int(st.wideChars))
+	s, err := C.go_libedit_gets(st.el, st.sigcfg, &count, &interrupted, C.int(st.wideChars))
 	if interrupted > 0 {
 		// Reveal the partial line.
 		line, _ := el.GetLineInfo()

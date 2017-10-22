@@ -256,6 +256,8 @@ func (el EditLine) UseHistory(maxEntries int, dedup bool) error {
 	return nil
 }
 
+var errUnknownError = errors.New("unknown error")
+
 func (el EditLine) GetLine() (string, error) {
 	st := &editors[el]
 
@@ -269,8 +271,11 @@ func (el EditLine) GetLine() (string, error) {
 		C.el_reset(st.el)
 		return line, common.ErrInterrupted
 	}
-	if err != nil {
-		return "", err
+	if count == -1 {
+		if err != nil {
+			return "", err
+		}
+		return "", errUnknownError
 	}
 	if s == nil {
 		return "", io.EOF

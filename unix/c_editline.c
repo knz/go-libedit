@@ -6,6 +6,7 @@
 #include <termios.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "c_editline.h"
 
@@ -263,6 +264,7 @@ static unsigned char _el_rl_complete(EditLine *el, int ch) {
 /*************** el_gets *************/
 
 static EditLine* volatile g_el;
+static volatile int g_fdout;
 
 static void winch_handler(int signo) {
     // Tell libedit about the window size change.
@@ -271,10 +273,7 @@ static void winch_handler(int signo) {
     // Now we want to redraw the current line, however libedit at this
     // point expects the cursor to be at the beginning of the
     // line. Make it so.
-    FILE *fout;
-    el_get(g_el, EL_GETFP, 1, &fout);
-    fputc('\r', fout);
-    fflush(fout);
+    write(g_fdout, "\r", 1);
 
     // Ready to refresh. Do it.
     el_set(g_el, EL_REFRESH);
@@ -307,6 +306,9 @@ void *go_libedit_gets(EditLine *el, char *lprompt, char *rprompt,
     struct sigaction osa[2];
     struct sigaction nsa;
     g_el = el;
+    FILE *fout;
+    el_get(el, EL_GETFP, 1, &fout);
+    g_fdout = fileno(fout);
     sigaction(SIGCONT, 0, &nsa);
     nsa.sa_handler = cont_handler;
     nsa.sa_flags |= SA_RESTART;

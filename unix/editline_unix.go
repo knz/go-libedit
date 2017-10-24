@@ -139,8 +139,7 @@ func (el EditLine) Close() {
 		// Already closed.
 		return
 	}
-	C.el_end(st.el)
-	C.free(st.sigcfg)
+	C.go_libedit_close(st.el, st.sigcfg)
 	if st.h != nil {
 		C.history_end(st.h)
 	}

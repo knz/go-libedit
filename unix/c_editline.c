@@ -44,99 +44,36 @@ static char* go_libedit_rprompt(EditLine *el) {
     return go_libedit_rprompt_str ? go_libedit_rprompt_str : "";
 }
 
-/************** signals **************/
-
-// This logic replicates libedit's sig.c.
-#define	ALLSIGS		\
-	_DO(SIGINT)	\
-	_DO(SIGTSTP)	\
-	_DO(SIGQUIT)	\
-	_DO(SIGHUP)	\
-	_DO(SIGTERM)	\
-	_DO(SIGCONT)	\
-	_DO(SIGWINCH)
-#define ALLSIGSNO	7
-
-typedef struct {
-    struct sigaction sig_action[ALLSIGSNO];
-    sigset_t sig_set;
-    volatile sig_atomic_t sig_no;
-} go_libedit_signal_t;
-
-static const int sighdl[] = {
-#define	_DO(a)	(a),
-	ALLSIGS
-#undef	_DO
-	- 1
-};
-
-static sigjmp_buf jmpbuf;
-
-static void go_libedit_intr_handler(int signo) {
-    siglongjmp(jmpbuf, 1);
-}
-
-static go_libedit_signal_t* go_libedit_sig_init() {
-	size_t i;
-	sigset_t oset;
-	go_libedit_signal_t *sigcfg;
-
-	sigcfg = malloc(sizeof(go_libedit_signal_t));
-	if (!sigcfg)
-	    return NULL;
-
-	(void) sigemptyset(&sigcfg->sig_set);
-#define	_DO(a) (void) sigaddset(&sigcfg->sig_set, a);
-	ALLSIGS
-#undef	_DO
-
-	return sigcfg;
-}
-
-// Disable whatever signal handlers Go had set up, but keep them
-// save for restore by libedit_sig_clr().
-static void go_libedit_sig_set(EditLine *el, go_libedit_signal_t *sigcfg) {
-	size_t i;
-	sigset_t oset;
-	struct sigaction osa, nsa;
-
-	nsa.sa_flags = 0;
-	sigemptyset(&nsa.sa_mask);
-
-	(void) sigprocmask(SIG_BLOCK, &sigcfg->sig_set, &oset);
-
-	for (i = 0; sighdl[i] != -1; i++) {
-	    sigcfg->sig_action[i].sa_handler = SIG_ERR;
-	    sigcfg->sig_action[i].sa_flags = 0;
-	    sigemptyset(&sigcfg->sig_action[i].sa_mask);
-
-	    nsa.sa_handler = (sighdl[i] == SIGINT) ? go_libedit_intr_handler : SIG_DFL;
-	    if (sigaction(sighdl[i], &nsa, &osa) != -1)
-		sigcfg->sig_action[i] = osa;
-	}
-	(void) sigprocmask(SIG_SETMASK, &oset, NULL);
-}
-
-// Restore the original signal handlers.
-static void go_libedit_sig_clr(go_libedit_signal_t *sigcfg)
-{
-	size_t i;
-	sigset_t oset;
-
-	(void) sigprocmask(SIG_BLOCK, &sigcfg->sig_set, &oset);
-
-	for (i = 0; sighdl[i] != -1; i++)
-	    if (sigcfg->sig_action[i].sa_handler != SIG_ERR)
-		(void)sigaction(sighdl[i], &sigcfg->sig_action[i], NULL);
-
-	(void)sigprocmask(SIG_SETMASK, &oset, NULL);
-}
 
 /********** initialization ***********/
 
 static unsigned char	 _el_rl_complete(EditLine *, int);
 
+static volatile int g_interrupted;
+static unsigned char	 _el_rl_intr(EditLine * e, int c) {
+    g_interrupted = 1;
+    return CC_NEWLINE;
+}
+
+static unsigned char	 _el_rl_tstp(EditLine * e, int c) {
+    kill(0, SIGTSTP);
+    return CC_REDISPLAY;
+}
+
+
 void go_libedit_rebind_ctrls(EditLine *e) {
+    // Handle Ctrl+C gracefully.
+    el_set(e, EL_ADDFN, "rl_interrupt",
+	  "ReadLine compatible interrupt function",
+	  _el_rl_intr);
+    el_set(e, EL_BIND, "^C", "rl_interrupt", NULL);
+
+    // Handle Ctrl+Z gracefully.
+    el_set(e, EL_ADDFN, "rl_tstp",
+	   "ReadLine compatible suspend function",
+	   _el_rl_tstp);
+    el_set(e, EL_BIND, "^Z", "rl_tstp", NULL);
+
     // Word completion - this has to go after loading the default
     // mappings.
     el_set(e, EL_ADDFN, "rl_complete",
@@ -151,31 +88,28 @@ void go_libedit_rebind_ctrls(EditLine *e) {
 EditLine* go_libedit_init(char *appName, void** el_signal,
 			  FILE* fin, FILE* fout, FILE *ferr) {
     // Prepare signal handling.
-    go_libedit_signal_t *sigcfg = go_libedit_sig_init();
-    if (!sigcfg) {
-	return NULL;
-    }
-    (*el_signal) = sigcfg;
-
-    // Create the editor.
-    EditLine *e = el_init(appName, fin, fout, ferr);
-    if (!e) {
-	free(sigcfg);
-	return NULL;
-    }
+    (*el_signal) = 0;
 
     // Do we really want to edit?
     int editmode = 1;
     struct termios t;
     if (tcgetattr(fileno(fin), &t) != -1 && (t.c_lflag & ECHO) == 0)
 	editmode = 0;
+
+    // Create the editor.
+
+    // We need to mark here in the terminal config that Ctrl+C doesn't
+    // do anything, so that el_init() captures and saves that
+    // information. It will be used every time el_gets() starts,
+    // when reset the terminal to "known settings".
+    EditLine *e = el_init(appName, fin, fout, ferr);
+
+    if (!e) {
+	return NULL;
+    }
+
     if (!editmode)
 	el_set(e, EL_EDITMODE, 0);
-
-    // We'll let libedit do signalling, but we'll also ensure to
-    // disable Go's signal handlers, because they need SA_ONSTACK to
-    // be set and libedit doesn't do that on its own.
-    el_set(e, EL_SIGNAL, 1);
 
     // Set up the prompt functions. Unfortunately we cannot use a real
     // callback into Go because Go doesn't like being called from an
@@ -328,44 +262,109 @@ static unsigned char _el_rl_complete(EditLine *el, int ch) {
 
 /*************** el_gets *************/
 
+static EditLine* volatile g_el;
+
+static void winch_handler(int signo) {
+    // Tell libedit about the window size change.
+    el_resize(g_el);
+
+    // Now we want to redraw the current line, however libedit at this
+    // point expects the cursor to be at the beginning of the
+    // line. Make it so.
+    FILE *fout;
+    el_get(g_el, EL_GETFP, 1, &fout);
+    fputc('\r', fout);
+    fflush(fout);
+
+    // Ready to refresh. Do it.
+    el_set(g_el, EL_REFRESH);
+}
+
+static void cont_handler(int signo) {
+    // This can happen when the process comes back to
+    // the foreground, after being suspended and
+    // perhaps after a shell has reset the terminal.
+    //
+    // So refresh the input stream's termios.
+    // We don't really need to reset intr here, just
+    // to call SETTY -d so that the editor's termios
+    // get re-loaded.
+    el_set(g_el, EL_SETTY, "-d", "intr=", NULL);
+
+    // Then re-load the terminal settings (size etc).
+    el_set(g_el, EL_PREP_TERM, 1);
+    // And redraw the current input line.
+    el_set(g_el, EL_REFRESH);
+}
+
+
 void *go_libedit_gets(EditLine *el, char *lprompt, char *rprompt,
 		      void *p_sigcfg, int *count, int *interrupted, int widechar) {
     void *ret = NULL;
     int saveerr = 0;
 
-    // Save and clear Go's signal handlers, set up our own for SIGINT / Ctrl+C.
-    go_libedit_signal_t *sigcfg = (go_libedit_signal_t*)p_sigcfg;
-    go_libedit_sig_set(el, sigcfg);
+    // Save and clear Go's signal handlers, set up our own for SIGCONT and SIGWINCH.
+    struct sigaction osa[2];
+    struct sigaction nsa;
+    g_el = el;
+    sigaction(SIGCONT, 0, &nsa);
+    nsa.sa_handler = cont_handler;
+    nsa.sa_flags |= SA_RESTART;
+    sigaction(SIGCONT, &nsa, &osa[0]);
+    sigaction(SIGWINCH, 0, &nsa);
+    nsa.sa_handler = winch_handler;
+    nsa.sa_flags |= SA_RESTART;
+    sigaction(SIGWINCH, &nsa, &osa[1]);
 
-    // Prepare to be interrupted with SIGINT (Ctrl+C).
-    if (sigsetjmp(jmpbuf, 1)) {
-	saveerr = EINTR;
-	*interrupted = 1;
-	ret = NULL;
-	goto restoresig;
-    }
+    // Disable terminal translation of ^C and ^Z to SIGINT and SIGTSTP.
+    el_set(el, EL_SETTY, "-d", "intr=", NULL);
+    el_set(el, EL_SETTY, "-d", "susp=", NULL);
+    el_set(el, EL_SETTY, "-x", "intr=", NULL);
+    el_set(el, EL_SETTY, "-x", "susp=", NULL);
+    el_set(el, EL_SETTY, "-q", "intr=", NULL);
+    el_set(el, EL_SETTY, "-q", "susp=", NULL);
+    el_reset(el);
 
     // Install the prompts.
     go_libedit_lprompt_str = lprompt;
     go_libedit_rprompt_str = rprompt;
 
     // Read the line.
+    g_interrupted = 0;
     if (widechar) {
 	ret = (void *)el_wgets(el, count);
     } else {
 	ret = (void *)el_gets(el, count);
     }
+    // Save errno so we have something meaningful to return below.
     saveerr = errno;
+    if (g_interrupted != 0) {
+	saveerr = EINTR;
+	*interrupted = 1;
+	ret = NULL;
+    }
 
-restoresig:
     go_libedit_lprompt_str = NULL;
     go_libedit_rprompt_str = NULL;
 
-    // Remove our signal handler, restore Go's.
-    go_libedit_sig_clr(sigcfg);
+    // Restore Go's signal handlers.
+    sigaction(SIGCONT, &osa[0], 0);
+    sigaction(SIGWINCH, &osa[1], 0);
 
-restore:
+    // If libedit got interrupted it may not have restored the
+    // terminal settings properly. Restore them.
+    el_set(el, EL_SETTY, "-d", "intr=^C", NULL);
+    el_set(el, EL_SETTY, "-d", "susp=^Z", NULL);
+    el_set(el, EL_SETTY, "-x", "intr=^C", NULL);
+    el_set(el, EL_SETTY, "-x", "susp=^Z", NULL);
+    el_set(el, EL_SETTY, "-q", "intr=^C", NULL);
+    el_set(el, EL_SETTY, "-q", "susp=^Z", NULL);
+
     // Restore errno.
     errno = saveerr;
     return ret;
+}
+
+void go_libedit_close(EditLine *el, void *p_sigcfg) {
+    el_end(el);
 }

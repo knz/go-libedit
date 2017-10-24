@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"strings"
+	"time"
 
 	libedit "github.com/knz/go-libedit"
 )
@@ -49,6 +50,8 @@ func main() {
 			log.Fatal(err)
 		}
 		fmt.Printf("echo %q\n", s)
+		time.Sleep(2 * time.Second)
+		fmt.Println("ok")
 		if err := el.AddHistory(s); err != nil {
 			log.Fatal(err)
 		}

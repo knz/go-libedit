@@ -6,7 +6,7 @@
 
 typedef char* pchar;
 
-EditLine* go_libedit_init(char *appName, void **sigcfg,
+EditLine* go_libedit_init(int id, char *appName, void **sigcfg,
 			  FILE* fin, FILE* fout, FILE *ferr,
 			  void *sigtramp);
 void go_libedit_close(EditLine *el, void *sigcfg);

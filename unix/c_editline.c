@@ -90,7 +90,7 @@ void go_libedit_rebind_ctrls(EditLine *e) {
 // See the explanation above go_libedit_gets below.
 static void* g_sigtramp;
 
-EditLine* go_libedit_init(char *appName, void** el_signal,
+EditLine* go_libedit_init(int id, char *appName, void** el_signal,
 			  FILE* fin, FILE* fout, FILE *ferr,
 			  void *sigtramp) {
     // Prepare signal handling.
@@ -114,6 +114,8 @@ EditLine* go_libedit_init(char *appName, void** el_signal,
     if (!e) {
 	return NULL;
     }
+
+    go_libedit_set_clientdata(e, id);
 
     if (!editmode)
 	el_set(e, EL_EDITMODE, 0);

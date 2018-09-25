@@ -322,16 +322,14 @@ static const wchar_t break_chars[] = L" \t\n\"\\'`@$><=;|&{(";
 // to the attempted_completion_function, yet we really want this.
 // So we'll pass it as a hidden argument via a global variable.
 // This effectively makes the entire library thread-unsafe. :'-(
+//
+// TODO(benesch): now that we reimplement fn_complete, we can change the API to
+// be suitable for our purposes.
 
 static struct clientdata* global_instance;
 
 static char **wrap_autocomplete(const char *word, int unused1, int unused2) {
     return go_libedit_getcompletions(global_instance->id, (char*)word);
-}
-
-static const char *_rl_completion_append_character_function(const char *_) {
-    static const char *sp = " ";
-    return sp;
 }
 
 static unsigned char _el_rl_complete(EditLine *el, int ch) {
@@ -346,7 +344,7 @@ static unsigned char _el_rl_complete(EditLine *el, int ch) {
 	wrap_autocomplete /* attempted_completion_function */,
 	break_chars /* word_break */,
 	NULL /* special_prefixes */,
-	_rl_completion_append_character_function /* app_func */,
+	NULL /* app_func */,
 	100 /* query_items */,
 	NULL /* completion_type */,
 	&avoid_filename_completion /* over */,

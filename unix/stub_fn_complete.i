@@ -133,7 +133,7 @@ char *multibyte_to_singlebyte(wchar_t *s) {
 		if (!*s)
 			/* nothing remaining to convert. */
 			break;
-		
+
 		/* convert one character */
 		int l = wctomb(buf + i, *s);
 		if (l < 0) {
@@ -155,7 +155,8 @@ wchar_t *singlebyte_to_multibyte(char *s) {
 	if (len == (size_t)-1)
 		return NULL;
 
-	/* make space. */
+	/* make space. len does not count the final NUL so we need to add it here. */
+	len++;
 	wchar_t * r = malloc(len * sizeof(wchar_t));
 	if (r)
 		/* do the actual conversion. */

@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_binary(
+    name = "test",
+    embed = [":test_lib"],
+    visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "test_lib",
+    srcs = ["example.go"],
+    importpath = "github.com/knz/go-libedit/test",
+    visibility = ["//visibility:private"],
+    deps = ["//:go-libedit"],
+)

@@ -1,0 +1,13 @@
+cc_library(
+    name = "linux-build",
+    srcs = glob([
+        "**/*.c",
+        "**/*.h",
+    ]),
+    hdrs = glob([
+        "**/*.h",
+        "**/*.c",
+    ]),
+    include_prefix = "",
+    visibility = ["//visibility:public"],
+)

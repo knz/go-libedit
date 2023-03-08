@@ -1,30 +1,28 @@
---- a/c-libedit/filecomplete.c
-+++ b/c-libedit/filecomplete.c
-@@ -405,7 +405,11 @@ fn_complete(EditLine *el,
- 	char **(*attempted_completion_function)(const char *, int, int),
- 	const wchar_t *word_break, const wchar_t *special_prefixes,
- 	const char *(*app_func)(const char *), size_t query_items,
--	int *completion_type, int *over, int *point, int *end)
-+	int *completion_type, int *over, int *point, int *end,
-+	const wchar_t *(*bsd_unused0)(const wchar_t *, const wchar_t *),
-+	wchar_t *(*bsd_unused1)(const wchar_t *),
-+	char *(*bsd_unused2)(const char *)
+--- c-libedit/filecomplete.c.orig	2021-05-22 20:54:26.000000000 +0200
++++ c-libedit/filecomplete.c	2023-03-08 13:10:03.359485491 +0100
+@@ -822,7 +822,11 @@
+     char **(*attempted_completion_function)(const char *, int, int),
+     const wchar_t *word_break, const wchar_t *special_prefixes,
+     const char *(*app_func)(const char *), size_t query_items,
+-    int *completion_type, int *over, int *point, int *end)
++    int *completion_type, int *over, int *point, int *end,
++    const wchar_t *(*bsd_unused0)(const wchar_t *, const wchar_t *),
++    wchar_t *(*bsd_unused1)(const wchar_t *),
++    char *(*bsd_unused2)(const char *)
 +    )
  {
- 	const LineInfoW *li;
- 	wchar_t *temp;
-@@ -567,5 +571,5 @@ _el_fn_complete(EditLine *el, int ch __attribute__((__unused__)))
+ 	return fn_complete2(el, complete_func, attempted_completion_function,
+ 	    word_break, special_prefixes, app_func, query_items,
+@@ -839,5 +843,5 @@
  {
  	return (unsigned char)fn_complete(el, NULL, NULL,
  	    break_chars, NULL, NULL, (size_t)100,
 -	    NULL, NULL, NULL, NULL);
 +	    NULL, NULL, NULL, NULL, NULL, NULL, NULL);
  }
-diff --git a/unix/src/c-libedit/filecomplete.h b/unix/src/c-libedit/filecomplete.h
-index 7e93b9e..fc1ca97 100644
---- a/c-libedit/filecomplete.h
-+++ b/c-libedit/filecomplete.h
-@@ -35,7 +35,11 @@ int fn_complete(EditLine *,
+--- c-libedit/filecomplete.h.orig	2023-03-08 13:00:52.914532658 +0100
++++ c-libedit/filecomplete.h	2023-03-08 13:10:51.307453982 +0100
+@@ -35,7 +35,11 @@
      char *(*)(const char *, int),
      char **(*)(const char *, int, int),
      const wchar_t *, const wchar_t *, const char *(*)(const char *), size_t,
@@ -34,14 +32,12 @@ index 7e93b9e..fc1ca97 100644
 +    wchar_t *(*)(const wchar_t *),
 +    char *(*)(const char *)
 +    );
- 
- void fn_display_match_list(EditLine *, char **, size_t, size_t);
- char *fn_tilde_expand(const char *);
-diff --git a/unix/src/c-libedit/readline.c b/unix/src/c-libedit/readline.c
-index 74a7615..f62aeaa 100644
---- a/c-libedit/readline.c
-+++ b/c-libedit/readline.c
-@@ -1873,7 +1873,7 @@ rl_complete(int ignore __attribute__((__unused__)), int invoking_key)
+ int fn_complete2(EditLine *,
+     char *(*)(const char *, int),
+     char **(*)(const char *, int, int),
+--- c-libedit/readline.c.orig	2023-03-08 13:00:28.000000000 +0100
++++ c-libedit/readline.c	2023-03-08 13:00:52.914532658 +0100
+@@ -1961,7 +1961,7 @@
  	    _rl_completion_append_character_function,
  	    (size_t)rl_completion_query_items,
  	    &rl_completion_type, &rl_attempted_completion_over,

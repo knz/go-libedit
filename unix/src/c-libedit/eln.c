@@ -1,4 +1,4 @@
-/*	$NetBSD: eln.c,v 1.34 2016/05/09 21:37:34 christos Exp $	*/
+/*	$NetBSD: eln.c,v 1.36 2021/08/15 10:08:41 christos Exp $	*/
 
 /*-
  * Copyright (c) 2009 The NetBSD Foundation, Inc.
@@ -27,7 +27,7 @@
  */
 #include "config.h"
 #if !defined(lint) && !defined(SCCSID)
-__RCSID("$NetBSD: eln.c,v 1.34 2016/05/09 21:37:34 christos Exp $");
+__RCSID("$NetBSD: eln.c,v 1.36 2021/08/15 10:08:41 christos Exp $");
 #endif /* not lint && not SCCSID */
 
 #include <errno.h>
@@ -153,6 +153,7 @@ el_set(EditLine *el, int op, ...)
 
 	case EL_SIGNAL:         /* int */
 	case EL_EDITMODE:
+	case EL_SAFEREAD:
 	case EL_UNBUFFERED:
 	case EL_PREP_TERM:
 		ret = el_wset(el, op, va_arg(ap, int));
@@ -315,20 +316,19 @@ el_get(EditLine *el, int op, ...)
 
 	case EL_SIGNAL:         /* int * */
 	case EL_EDITMODE:
+	case EL_SAFEREAD:
 	case EL_UNBUFFERED:
 	case EL_PREP_TERM:
 		ret = el_wget(el, op, va_arg(ap, int *));
 		break;
 
 	case EL_GETTC: {
-		char *argv[20];
+		char *argv[3];
 		static char gettc[] = "gettc";
-		int i;
-		for (i = 1; i < (int)__arraycount(argv); ++i)
-			if ((argv[i] = va_arg(ap, char *)) == NULL)
-				break;
 		argv[0] = gettc;
-		ret = terminal_gettc(el, i, argv);
+		argv[1] = va_arg(ap, char *);
+		argv[2] = va_arg(ap, void *);
+		ret = terminal_gettc(el, 3, argv);
 		break;
 	}
 

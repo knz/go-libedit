@@ -1,4 +1,4 @@
-/*	$NetBSD: histedit.h,v 1.56 2016/04/19 19:50:53 christos Exp $	*/
+/*	$NetBSD: histedit.h,v 1.58 2021/08/15 10:08:41 christos Exp $	*/
 
 /*-
  * Copyright (c) 1992, 1993
@@ -157,6 +157,7 @@ unsigned char	_el_fn_complete(EditLine *, int);
 #define	EL_RPROMPT_ESC	22	/* , prompt_func, Char);	      set/get */
 #define	EL_RESIZE	23	/* , el_zfunc_t, void *);	      set     */
 #define	EL_ALIAS_TEXT	24	/* , el_afunc_t, void *);	      set     */
+#define	EL_SAFEREAD	25	/* , int);			      set/get */
 
 #define	EL_BUILTIN_GETCFN	(NULL)
 
@@ -226,6 +227,7 @@ int		history(History *, HistEvent *, int, ...);
 #define	H_DELDATA	24	/* , int, histdata_t *);*/
 #define	H_REPLACE	25	/* , const char *, histdata_t);	*/
 #define	H_SAVE_FP	26	/* , FILE *);		*/
+#define	H_NSAVE_FP	27	/* , size_t, FILE *);	*/
 
 
 
@@ -251,6 +253,10 @@ int		 tok_str(Tokenizer *, const char *,
  */
 #include <wchar.h>
 #include <wctype.h>
+
+#ifndef HAVE_WCSDUP
+wchar_t * wcsdup(const wchar_t *str);
+#endif
 
 /*
  * ==== Editing ====

@@ -1,4 +1,4 @@
-/*	$NetBSD: chartype.h,v 1.34 2016/05/09 21:46:56 christos Exp $	*/
+/*	$NetBSD: chartype.h,v 1.36 2019/09/15 21:09:11 christos Exp $	*/
 
 /*-
  * Copyright (c) 2009 The NetBSD Foundation, Inc.
@@ -33,7 +33,12 @@
  * supports non-BMP code points without requiring UTF-16, but nothing
  * seems to actually advertise this properly, despite Unicode 3.1 having
  * been around since 2001... */
-#if !defined(__NetBSD__) && !defined(__sun) && !(defined(__APPLE__) && defined(__MACH__)) && !defined(__OpenBSD__) && !defined(__FreeBSD__)
+#if	!defined(__NetBSD__) && \
+	!defined(__sun) && \
+	!(defined(__APPLE__) && defined(__MACH__)) && \
+	!defined(__OpenBSD__) && \
+	!defined(__FreeBSD__) && \
+	!defined(__DragonFly__)
 #ifndef __STDC_ISO_10646__
 /* In many places it is assumed that the first 127 code points are ASCII
  * compatible, so ensure wchar_t indeed does ISO 10646 and not some other
@@ -82,7 +87,7 @@ libedit_private size_t ct_enc_width(wchar_t);
 /* The terminal is thought of in terms of X columns by Y lines. In the cases
  * where a wide character takes up more than one column, the adjacent
  * occupied column entries will contain this faux character. */
-#define MB_FILL_CHAR ((wchar_t)-1)
+#define MB_FILL_CHAR ((wint_t)-1)
 
 /* Visual width of character c, taking into account ^? , \0177 and \U+nnnnn
  * style visual expansions. */

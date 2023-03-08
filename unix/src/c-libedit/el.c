@@ -1,4 +1,4 @@
-/*	$NetBSD: el.c,v 1.92 2016/05/22 19:44:26 christos Exp $	*/
+/*	$NetBSD: el.c,v 1.100 2021/08/15 10:08:41 christos Exp $	*/
 
 /*-
  * Copyright (c) 1992, 1993
@@ -37,7 +37,7 @@
 #if 0
 static char sccsid[] = "@(#)el.c	8.2 (Berkeley) 1/3/94";
 #else
-__RCSID("$NetBSD: el.c,v 1.92 2016/05/22 19:44:26 christos Exp $");
+__RCSID("$NetBSD: el.c,v 1.100 2021/08/15 10:08:41 christos Exp $");
 #endif
 #endif /* not lint && not SCCSID */
 
@@ -102,16 +102,14 @@ el_init(const char *prog, FILE *fin, FILE *fout, FILE *ferr)
 	fileno(ferr));
 }
 
-EditLine *
-el_init_fd(const char *prog, FILE *fin, FILE *fout, FILE *ferr,
-    int fdin, int fdout, int fderr)
+libedit_private EditLine *
+el_init_internal(const char *prog, FILE *fin, FILE *fout, FILE *ferr,
+    int fdin, int fdout, int fderr, int flags)
 {
-	EditLine *el = el_malloc(sizeof(*el));
+	EditLine *el = el_calloc(1, sizeof(*el));
 
 	if (el == NULL)
 		return NULL;
-
-	memset(el, 0, sizeof(EditLine));
 
 	el->el_infile = fin;
 	el->el_outfile = fout;
@@ -130,11 +128,7 @@ el_init_fd(const char *prog, FILE *fin, FILE *fout, FILE *ferr,
 	/*
          * Initialize all the modules. Order is important!!!
          */
-	el->el_flags = 0;
-	if (setlocale(LC_CTYPE, NULL) != NULL){
-		if (strcmp(nl_langinfo(CODESET), "UTF-8") == 0)
-			el->el_flags |= CHARSET_IS_UTF8;
-	}
+	el->el_flags = flags;
 
 	if (terminal_init(el) == -1) {
 		el_free(el->el_prog);
@@ -150,6 +144,7 @@ el_init_fd(const char *prog, FILE *fin, FILE *fout, FILE *ferr,
 	(void) hist_init(el);
 	(void) prompt_init(el);
 	(void) sig_init(el);
+	(void) literal_init(el);
 	if (read_init(el) == -1) {
 		el_end(el);
 		return NULL;
@@ -157,6 +152,12 @@ el_init_fd(const char *prog, FILE *fin, FILE *fout, FILE *ferr,
 	return el;
 }
 
+EditLine *
+el_init_fd(const char *prog, FILE *fin, FILE *fout, FILE *ferr,
+    int fdin, int fdout, int fderr)
+{
+	return el_init_internal(prog, fin, fout, ferr, fdin, fdout, fderr, 0);
+}
 
 /* el_end():
  *	Clean up.
@@ -174,13 +175,14 @@ el_end(EditLine *el)
 	keymacro_end(el);
 	map_end(el);
 	if (!(el->el_flags & NO_TTY))
-		tty_end(el);
+		tty_end(el, TCSAFLUSH);
 	ch_end(el);
 	read_end(el->el_read);
 	search_end(el);
 	hist_end(el);
 	prompt_end(el);
 	sig_end(el);
+	literal_end(el);
 
 	el_free(el->el_prog);
 	el_free(el->el_visual.cbuff);
@@ -328,10 +330,18 @@ el_wset(EditLine *el, int op, ...)
 		void *ptr = va_arg(ap, void *);
 
 		rv = hist_set(el, func, ptr);
-		if (!(el->el_flags & CHARSET_IS_UTF8))
+		if (MB_CUR_MAX == 1)
 			el->el_flags &= ~NARROW_HISTORY;
 		break;
 	}
+
+	case EL_SAFEREAD:
+		if (va_arg(ap, int))
+			el->el_flags |= FIXIO;
+		else
+			el->el_flags &= ~FIXIO;
+		rv = 0;
+		break;
 
 	case EL_EDITMODE:
 		if (va_arg(ap, int))
@@ -462,6 +472,11 @@ el_wget(EditLine *el, int op, ...)
 		rv = 0;
 		break;
 
+	case EL_SAFEREAD:
+		*va_arg(ap, int *) = (el->el_flags & FIXIO);
+		rv = 0;
+		break;
+
 	case EL_TERMINAL:
 		terminal_get(el, va_arg(ap, const char **));
 		rv = 0;
@@ -470,15 +485,11 @@ el_wget(EditLine *el, int op, ...)
 	case EL_GETTC:
 	{
 		static char name[] = "gettc";
-		char *argv[20];
-		int i;
-
-		for (i = 1; i < (int)__arraycount(argv); i++)
-			if ((argv[i] = va_arg(ap, char *)) == NULL)
-				break;
-
+		char *argv[3];
 		argv[0] = name;
-		rv = terminal_gettc(el, i, argv);
+		argv[1] = va_arg(ap, char *);
+		argv[2] = va_arg(ap, void *);
+		rv = terminal_gettc(el, 3, argv);
 		break;
 	}
 
@@ -558,17 +569,28 @@ el_source(EditLine *el, const char *fname)
 
 	fp = NULL;
 	if (fname == NULL) {
-		static const char elpath[] = "/.editrc";
-		size_t plen = sizeof(elpath);
 
-		if ((ptr = secure_getenv("HOME")) == NULL)
-			return -1;
-		plen += strlen(ptr);
-		if ((path = el_malloc(plen * sizeof(*path))) == NULL)
-			return -1;
-		(void)snprintf(path, plen, "%s%s", ptr, elpath);
-		fname = path;
+		/* secure_getenv is guaranteed to be defined and do the right thing here */
+		/* because of the defines above which take into account issetugid, */
+		/* secure_getenv and __secure_getenv availability. */
+		if ((fname = secure_getenv("EDITRC")) == NULL) {
+			static const char elpath[] = "/.editrc";
+			size_t plen = sizeof(elpath);
+
+			if ((ptr = secure_getenv("HOME")) == NULL)
+				return -1;
+			plen += strlen(ptr);
+			if ((path = el_calloc(plen, sizeof(*path))) == NULL)
+				return -1;
+			(void)snprintf(path, plen, "%s%s", ptr,
+				elpath + (*ptr == '\0'));
+			fname = path;
+		}
+
 	}
+	if (fname[0] == '\0')
+		return -1;
+
 	if (fp == NULL)
 		fp = fopen(fname, "r");
 	if (fp == NULL) {

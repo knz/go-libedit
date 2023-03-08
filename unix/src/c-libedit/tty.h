@@ -1,4 +1,4 @@
-/*	$NetBSD: tty.h,v 1.21 2016/05/09 21:46:56 christos Exp $	*/
+/*	$NetBSD: tty.h,v 1.24 2021/07/31 20:51:32 andvar Exp $	*/
 
 /*-
  * Copyright (c) 1992, 1993
@@ -432,7 +432,7 @@
 #define	C_SH(A)		((unsigned int)(1 << (A)))
 
 /*
- * Terminal dependend data structures
+ * Terminal dependent data structures
  */
 #define	EX_IO	0	/* while we are executing	*/
 #define	ED_IO	1	/* while we are editing		*/
@@ -457,13 +457,14 @@ typedef struct {
 typedef unsigned char ttychar_t[NN_IO][C_NCC];
 
 libedit_private int	tty_init(EditLine *);
-libedit_private void	tty_end(EditLine *);
+libedit_private void	tty_end(EditLine *, int);
 libedit_private int	tty_stty(EditLine *, int, const wchar_t **);
 libedit_private int	tty_rawmode(EditLine *);
 libedit_private int	tty_cookedmode(EditLine *);
 libedit_private int	tty_quotemode(EditLine *);
 libedit_private int	tty_noquotemode(EditLine *);
 libedit_private void	tty_bind_char(EditLine *, int);
+libedit_private int	tty_get_signal_character(EditLine *, int);
 
 typedef struct {
     ttyperm_t t_t;

@@ -1,4 +1,4 @@
-/*	$NetBSD: el.h,v 1.41 2016/05/24 15:00:45 christos Exp $	*/
+/*	$NetBSD: el.h,v 1.46 2021/08/15 10:08:41 christos Exp $	*/
 
 /*-
  * Copyright (c) 1992, 1993
@@ -51,12 +51,13 @@
 
 #define	EL_BUFSIZ	((size_t)1024)	/* Maximum line size		*/
 
-#define	HANDLE_SIGNALS	0x01
-#define	NO_TTY		0x02
-#define	EDIT_DISABLED	0x04
-#define	UNBUFFERED	0x08
-#define	CHARSET_IS_UTF8 0x10
-#define	NARROW_HISTORY	0x40
+#define	HANDLE_SIGNALS	0x001
+#define	NO_TTY		0x002
+#define	EDIT_DISABLED	0x004
+#define	UNBUFFERED	0x008
+#define	NARROW_HISTORY	0x040
+#define	NO_RESET	0x080
+#define	FIXIO		0x100
 
 typedef unsigned char el_action_t;	/* Index to command array	*/
 
@@ -89,11 +90,13 @@ typedef struct el_state_t {
  * Until we come up with something better...
  */
 #define	el_malloc(a)	malloc(a)
+#define	el_calloc(a,b)	calloc(a, b)
 #define	el_realloc(a,b)	realloc(a, b)
 #define	el_free(a)	free(a)
 
 #include "tty.h"
 #include "prompt.h"
+#include "literal.h"
 #include "keymacro.h"
 #include "terminal.h"
 #include "refresh.h"
@@ -115,8 +118,8 @@ struct editline {
 	int		  el_errfd;	/* Error file descriptor	*/
 	int		  el_flags;	/* Various flags.		*/
 	coord_t		  el_cursor;	/* Cursor location		*/
-	wchar_t		**el_display;	/* Real screen image = what is there */
-	wchar_t		**el_vdisplay;	/* Virtual screen image = what we see */
+	wint_t		**el_display;	/* Real screen image = what is there */
+	wint_t		**el_vdisplay;	/* Virtual screen image = what we see */
 	void		 *el_data;	/* Client data			*/
 	el_line_t	  el_line;	/* The current line information	*/
 	el_state_t	  el_state;	/* Current editor state		*/
@@ -125,6 +128,7 @@ struct editline {
 	el_refresh_t	  el_refresh;	/* Refresh stuff		*/
 	el_prompt_t	  el_prompt;	/* Prompt stuff			*/
 	el_prompt_t	  el_rprompt;	/* Prompt stuff			*/
+	el_literal_t	  el_literal;	/* prompt literal bits		*/
 	el_chared_t	  el_chared;	/* Characted editor stuff	*/
 	el_map_t	  el_map;	/* Key mapping stuff		*/
 	el_keymacro_t	  el_keymacro;	/* Key binding stuff		*/
@@ -139,6 +143,8 @@ struct editline {
 };
 
 libedit_private int	el_editmode(EditLine *, int, const wchar_t **);
+libedit_private EditLine *el_init_internal(const char *, FILE *, FILE *,
+    FILE *, int, int, int, int);
 
 #ifdef DEBUG
 #define	EL_ABORT(a)	do { \

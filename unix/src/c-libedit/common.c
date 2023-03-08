@@ -1,4 +1,4 @@
-/*	$NetBSD: common.c,v 1.47 2016/05/22 19:44:26 christos Exp $	*/
+/*	$NetBSD: common.c,v 1.49 2020/03/30 06:54:37 ryo Exp $	*/
 
 /*-
  * Copyright (c) 1992, 1993
@@ -37,7 +37,7 @@
 #if 0
 static char sccsid[] = "@(#)common.c	8.1 (Berkeley) 6/4/93";
 #else
-__RCSID("$NetBSD: common.c,v 1.47 2016/05/22 19:44:26 christos Exp $");
+__RCSID("$NetBSD: common.c,v 1.49 2020/03/30 06:54:37 ryo Exp $");
 #endif
 #endif /* not lint && not SCCSID */
 
@@ -363,15 +363,17 @@ ed_prev_char(EditLine *el, wint_t c __attribute__((__unused__)))
  *	[^V] [^V]
  */
 libedit_private el_action_t
-ed_quoted_insert(EditLine *el, wint_t c)
+/*ARGSUSED*/
+ed_quoted_insert(EditLine *el, wint_t c __attribute__((__unused__)))
 {
 	int num;
+	wchar_t ch;
 
 	tty_quotemode(el);
-	num = el_wgetc(el, &c);
+	num = el_wgetc(el, &ch);
 	tty_noquotemode(el);
 	if (num == 1)
-		return ed_insert(el, c);
+		return ed_insert(el, ch);
 	else
 		return ed_end_of_file(el, 0);
 }
@@ -656,7 +658,7 @@ ed_search_prev_history(EditLine *el, wint_t c __attribute__((__unused__)))
 
 	while (hp != NULL) {
 #ifdef SDEBUG
-		(void) fprintf(el->el_errfile, "Comparing with \"%s\"\n", hp);
+		(void) fprintf(el->el_errfile, "Comparing with \"%ls\"\n", hp);
 #endif
 		if ((wcsncmp(hp, el->el_line.buffer, (size_t)
 			    (el->el_line.lastchar - el->el_line.buffer)) ||
@@ -711,7 +713,7 @@ ed_search_next_history(EditLine *el, wint_t c __attribute__((__unused__)))
 
 	for (h = 1; h < el->el_history.eventno && hp; h++) {
 #ifdef SDEBUG
-		(void) fprintf(el->el_errfile, "Comparing with \"%s\"\n", hp);
+		(void) fprintf(el->el_errfile, "Comparing with \"%ls\"\n", hp);
 #endif
 		if ((wcsncmp(hp, el->el_line.buffer, (size_t)
 			    (el->el_line.lastchar - el->el_line.buffer)) ||

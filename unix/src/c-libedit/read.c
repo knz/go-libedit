@@ -1,4 +1,4 @@
-/*	$NetBSD: read.c,v 1.102 2016/12/11 15:47:06 christos Exp $	*/
+/*	$NetBSD: read.c,v 1.107 2021/08/15 10:08:41 christos Exp $	*/
 
 /*-
  * Copyright (c) 1992, 1993
@@ -37,7 +37,7 @@
 #if 0
 static char sccsid[] = "@(#)read.c	8.1 (Berkeley) 6/4/93";
 #else
-__RCSID("$NetBSD: read.c,v 1.102 2016/12/11 15:47:06 christos Exp $");
+__RCSID("$NetBSD: read.c,v 1.107 2021/08/15 10:08:41 christos Exp $");
 #endif
 #endif /* not lint && not SCCSID */
 
@@ -89,8 +89,7 @@ read_init(EditLine *el)
 		return -1;
 
 	ma = &el->el_read->macros;
-	if ((ma->macro = el_malloc(EL_MAXMACRO *
-	    sizeof(*ma->macro))) == NULL) {
+	if ((ma->macro = el_calloc(EL_MAXMACRO, sizeof(*ma->macro))) == NULL) {
 		free(el->el_read);
 		return -1;
 	}
@@ -229,10 +228,9 @@ read_getcmd(EditLine *el, el_action_t *cmdnum, wchar_t *ch)
 {
 	static const wchar_t meta = (wchar_t)0x80;
 	el_action_t cmd;
-	int num;
 
 	do {
-		if ((num = el_wgetc(el, ch)) != 1)
+		if (el_wgetc(el, ch) != 1)
 			return -1;
 
 #ifdef	KANJI
@@ -279,7 +277,7 @@ static int
 read_char(EditLine *el, wchar_t *cp)
 {
 	ssize_t num_read;
-	int tried = 0;
+	int tried = (el->el_flags & FIXIO) == 0;
 	char cbuf[MB_LEN_MAX];
 	size_t cbp = 0;
 	int save_errno = errno;
@@ -336,13 +334,7 @@ read_char(EditLine *el, wchar_t *cp)
 				goto again;
 			}
 		case (size_t)-2:
-			/*
-			 * We don't support other multibyte charsets.
-			 * The second condition shouldn't happen
-			 * and is here merely for additional safety.
-			 */
-			if ((el->el_flags & CHARSET_IS_UTF8) == 0 ||
-			    cbp >= MB_LEN_MAX) {
+			if (cbp >= MB_LEN_MAX) {
 				errno = EILSEQ;
 				*cp = L'\0';
 				return -1;

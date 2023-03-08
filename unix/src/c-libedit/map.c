@@ -1,4 +1,4 @@
-/*	$NetBSD: map.c,v 1.51 2016/05/09 21:46:56 christos Exp $	*/
+/*	$NetBSD: map.c,v 1.54 2021/08/29 09:41:59 christos Exp $	*/
 
 /*-
  * Copyright (c) 1992, 1993
@@ -37,7 +37,7 @@
 #if 0
 static char sccsid[] = "@(#)map.c	8.1 (Berkeley) 6/4/93";
 #else
-__RCSID("$NetBSD: map.c,v 1.51 2016/05/09 21:46:56 christos Exp $");
+__RCSID("$NetBSD: map.c,v 1.54 2021/08/29 09:41:59 christos Exp $");
 #endif
 #endif /* not lint && not SCCSID */
 
@@ -85,12 +85,12 @@ static const el_action_t  el_map_emacs[] = {
 	/*  15 */	ED_IGNORE,		/* ^O */
 	/*  16 */	ED_PREV_HISTORY,	/* ^P */
 	/*  17 */	ED_IGNORE,		/* ^Q */
-	/*  18 */	ED_REDISPLAY,		/* ^R */
+	/*  18 */	EM_INC_SEARCH_PREV,	/* ^R */
 	/*  19 */	ED_IGNORE,		/* ^S */
 	/*  20 */	ED_TRANSPOSE_CHARS,	/* ^T */
 	/*  21 */	EM_KILL_LINE,		/* ^U */
 	/*  22 */	ED_QUOTED_INSERT,	/* ^V */
-	/*  23 */	EM_KILL_REGION,		/* ^W */
+	/*  23 */	ED_DELETE_PREV_WORD,	/* ^W */
 	/*  24 */	ED_SEQUENCE_LEAD_IN,	/* ^X */
 	/*  25 */	EM_YANK,		/* ^Y */
 	/*  26 */	ED_IGNORE,		/* ^Z */
@@ -906,28 +906,28 @@ map_init(EditLine *el)
          */
 #ifdef MAP_DEBUG
 	if (sizeof(el_map_emacs) != N_KEYS * sizeof(el_action_t))
-		EL_ABORT((el->errfile, "Emacs map incorrect\n"));
+		EL_ABORT((el->el_errfile, "Emacs map incorrect\n"));
 	if (sizeof(el_map_vi_command) != N_KEYS * sizeof(el_action_t))
-		EL_ABORT((el->errfile, "Vi command map incorrect\n"));
+		EL_ABORT((el->el_errfile, "Vi command map incorrect\n"));
 	if (sizeof(el_map_vi_insert) != N_KEYS * sizeof(el_action_t))
-		EL_ABORT((el->errfile, "Vi insert map incorrect\n"));
+		EL_ABORT((el->el_errfile, "Vi insert map incorrect\n"));
 #endif
 
-	el->el_map.alt = el_malloc(sizeof(*el->el_map.alt) * N_KEYS);
+	el->el_map.alt = el_calloc(N_KEYS, sizeof(*el->el_map.alt));
 	if (el->el_map.alt == NULL)
 		return -1;
-	el->el_map.key = el_malloc(sizeof(*el->el_map.key) * N_KEYS);
+	el->el_map.key = el_calloc(N_KEYS, sizeof(*el->el_map.key));
 	if (el->el_map.key == NULL)
 		return -1;
 	el->el_map.emacs = el_map_emacs;
 	el->el_map.vic = el_map_vi_command;
 	el->el_map.vii = el_map_vi_insert;
-	el->el_map.help = el_malloc(sizeof(*el->el_map.help) * EL_NUM_FCNS);
+	el->el_map.help = el_calloc(EL_NUM_FCNS, sizeof(*el->el_map.help));
 	if (el->el_map.help == NULL)
 		return -1;
 	(void) memcpy(el->el_map.help, el_func_help,
 	    sizeof(*el->el_map.help) * EL_NUM_FCNS);
-	el->el_map.func = el_malloc(sizeof(*el->el_map.func) * EL_NUM_FCNS);
+	el->el_map.func = el_calloc(EL_NUM_FCNS, sizeof(*el->el_map.func));
 	if (el->el_map.func == NULL)
 		return -1;
 	memcpy(el->el_map.func, el_func, sizeof(*el->el_map.func)

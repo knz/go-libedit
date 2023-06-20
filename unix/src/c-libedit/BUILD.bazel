@@ -9,8 +9,13 @@ cc_library(
         "*.h",
         "*.c",
         "editline/readline.h",
-    ]),
-    include_prefix = "",
+    ]) + ["//unix/src/c-libedit/linux-build:headers"],
+    copts = [
+        "-I$(LINUX_BUILD_DIRNAME)",
+        "-I$(LINUX_BUILD_DIRNAME)/..",
+    ],
+    toolchains = [
+        "//unix/src/c-libedit/linux-build:dirname",
+    ],
     visibility = ["//visibility:public"],
-    deps = ["//unix/src/c-libedit/linux-build"],
 )

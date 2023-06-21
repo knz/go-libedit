@@ -1,13 +1,12 @@
-cc_library(
-    name = "linux-build",
-    srcs = glob([
-        "**/*.c",
-        "**/*.h",
-    ]),
-    hdrs = glob([
-        "**/*.h",
-        "**/*.c",
-    ]),
-    include_prefix = "",
+load(":include-dirname.bzl", "dirname")
+
+dirname(
+    name = "dirname",
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "headers",
+    srcs = glob(["*.h"]),
     visibility = ["//visibility:public"],
 )
